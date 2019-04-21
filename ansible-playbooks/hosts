@@ -1,0 +1,12 @@
+becca ansible_ssh_host=becca.mcgeeweb.uk
+lizzy ansible_ssh_host=lizzy.local
+selena ansible_ssh_host=172.31.0.200 ansbile_ssh_user=vagrant ansible_ssh_password=vagrant
+
+[remote]
+becca
+
+[local]
+lizzy
+
+[vms]
+selena

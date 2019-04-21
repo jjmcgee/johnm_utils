@@ -1,0 +1,16 @@
+---
+- hosts: local
+  become: true
+  vars:
+    apache_vh_port: 80
+    site_root: /var/www/{{ domain }}
+
+  vars_prompt:
+    - name: domain
+      prompt:  Enter the domain name without www (e.g. mysite.com) 
+    - name: email
+      prompt: Enter your email address 
+
+  tasks:
+  - name: Check the params
+    command: /bin/echo "I have a port of {{ apache_vh_port }} and will create website www.{{ domain }} with admin contact {{ email }}"

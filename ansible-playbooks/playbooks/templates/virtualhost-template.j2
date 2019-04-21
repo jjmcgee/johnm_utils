@@ -1,0 +1,27 @@
+<VirtualHost *:{{ apache_vh_port }}>
+    ServerAdmin {{ email }}
+    ServerName {{ domain }}
+    ServerAlias www.{{ domain }}
+
+    DocumentRoot /var/www/{{ domain }}/html
+    <Directory />
+        Options FollowSymLinks
+        AllowOverride All
+    </Directory>
+
+    <Directory /var/www/{{ domain }}/html>
+        Options Indexes FollowSymLinks MultiViews
+        AllowOverride All
+        Order allow,deny
+        allow from all
+    </Directory>
+
+    ErrorLog ${APACHE_LOG_DIR}/{{ domain }}_error.log
+
+    # Possible values include: debug, info, notice, warn, error, crit,
+    # alert, emerg.
+    LogLevel warn
+
+    CustomLog ${APACHE_LOG_DIR}/{{ domain }}_access.log combined
+
+</VirtualHost>
