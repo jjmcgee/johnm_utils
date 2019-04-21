@@ -1,9 +1,11 @@
-#!/bin/env bash
+#!/usr/bin/env bash
 # reconnect wifi when it drops
+
+#set -x
 
 NetCard=wlan0	 		        # the netcard connected to the internet
 PingTarget=192.168.1.1          # the ping target, router ip or website, etc: 192.168.1.1, www.baidu.com
-LogFile=~/reconnect-wifi.log	# log file
+LogFile=~john/reconnect-wifi.log	# log file
 LogAll=false			        # log msg no matter whether the net is connected, used to be check whether the script is running.
 
 test -e $LogFile || touch $LogFile
