@@ -1,0 +1,4 @@
+1) Copy over ssh config to relevant location (check utils from gitlab then update this.
+2) groupadd mcgweb
+3) add john used and add to mcgweb group
+4) add %mcgweb ALL=(ALL) ALL to sudoers file (under sudo entry) 
