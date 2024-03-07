@@ -3,6 +3,7 @@ import subprocess
 import os
 import getpass
 import optparse
+import re
 
 # Variable Declarations
 git_bin = subprocess.run(['which', 'git'], capture_output=True, text=True).stdout.strip()
@@ -133,30 +134,10 @@ print("=======================================================================")
 
 for line in puppetfile_contents.splitlines():
   parts = None
-  if parts := re.match(r'^mod\s+\'(?P<module>.*)\',\s+:git\s+=>\s+\'(?P<repo>.*)\',\s+:branch\s+=>\s+\'(?P<branch>.*)\'', line):
+  if parts := re.match(r'^mod\s+\'(?P<module>.*)\',\s+:git\s+=>\s+\'(?P<repo>.*)\',', line):
     git_repo_lines = True
     puppet_module = parts['module']
     repo = parts['repo']
-    branch = parts['branch'] 
-
-    repo = repo.replace('ssh:', 'https:')
-    repo = repo.replace('git@', f"{git_username}@")
-    repo = repo.replace('-ssh', '')
-    repo = repo.replace(':7999/', '/scm/')
-    command = f"{git_bin} clone -b {branch} {repo} {os.path.join(puppet_environment, 'modules', puppet_module)}"
-    print(f"Running: {command}")
-    subprocess.run(command.split()) 
-    command = f"{git_bin} --git-dir={os.path.join(puppet_environment, 'modules', puppet_module, '.git')} config user.name '{user_fullname}'"
-    print(f"Running: {command}")
-    subprocess.run(command.split()) 
-    command = f"{git_bin} --git-dir={os.path.join(puppet_environment, 'modules', puppet_module, '.git')} config user.email '{user_email}'"
-    print(f"Running: {command}")
-    subprocess.run(command.split()) 
-  elif parts := re.match(r'^mod\s+\'(?P<module>.*)\',\s+:git\s+=>\s+\'(?P<repo>.*)\',\s+:commit\s+=>\s+\'(?P<commit>.*)\'', line):
-    git_repo_lines = True
-    puppet_module = parts['module']
-    repo = parts['repo']
-    commit = parts['commit'] 
 
     repo = repo.replace('ssh:', 'https:')
     repo = repo.replace('git@', f"{git_username}@")
@@ -167,4 +148,14 @@ for line in puppetfile_contents.splitlines():
     subprocess.run(command.split()) 
     command = f"{git_bin} --git-dir={os.path.join(puppet_environment, 'modules', puppet_module, '.git')} config user.name '{user_fullname}'"
     print(f"Running: {command}")
-    subprocess
+    subprocess.run(command.split()) 
+    command = f"{git_bin} --git-dir={os.path.join(puppet_environment, 'modules', puppet_module, '.git')} config user.email '{user_email}'"
+    print(f"Running: {command}")
+    subprocess.run(command.split()) 
+
+if git_repo_lines == False:
+  print(red("WARNING:No GIT repo modules found.Standard Environment is created!"))
+clear_all_vars()
+print("===============================================================================")
+print(blue("INFO: Setup completed.Env created under #{$puppet_environment}"))
+print("===============================================================================")
