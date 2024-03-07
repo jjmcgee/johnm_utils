@@ -1,218 +1,170 @@
-#!/opt/puppetlabs/puppet/bin/ruby
-require 'io/console'
-require 'optparse'
+#!/usr/bin/env python
+import subprocess
+import os
+import getpass
+import optparse
 
-###Variable Declarations###
-$git_bin = (`which git`).chomp
-$str_error_msg = "ERROR: Invalid input - "
-$environment_conf_contents = '
+# Variable Declarations
+git_bin = subprocess.run(['which', 'git'], capture_output=True, text=True).stdout.strip()
+str_error_msg = "ERROR: Invalid input - "
+environment_conf_contents = '''
 modulepath = ./modules:$basemodulepath
-'
-$site_pp_contents = '
+'''
+site_pp_contents = '''
 File { backup => false }
 
 node default {
   include jpmc_lib::ucm_puppet
 }
-'
-git_repo_lines = false
+'''
+git_repo_lines = False
 
-###Functions###
-def clear_all_vars
-  $git_bin = nil
-  $str_error_msg = nil
-  $site_pp_contents = nil
-  $environment_conf_contents = nil
-  git_askpass_file = nil
-end
+# Functions
+def clear_all_vars():
+  global git_bin, str_error_msg, site_pp_contents, environment_conf_contents
+  git_bin = None
+  str_error_msg = None
+  site_pp_contents = None
+  environment_conf_contents = None
 
-def colorize(text, color_code)
-  "\e[#{color_code}m#{text}\e[0m"
-end
+def colorize(text, color_code):
+  return f"\033[{color_code}m{text}\033[0m"
 
-def red(text); colorize(text, 31); end
-def green(text); colorize(text, 32); end
-def blue(text); colorize(text, 34); end
+def red(text): 
+  return colorize(text, 31)
 
+def blue(text): 
+  return colorize(text, 34)
 
-###Option switches###
-begin
-  options = {}
-    OptionParser.new do |opts|
-    opts.banner = "================================================================"
-    opts.separator "Usage: setup_env -f | --puppetfile <puppet file name and path>
-                 -d | --environment <Puppet environment directory>
-                 -u | --username <git bitbucket username>
-                 -n | --fullname <user full name>
-                 -e | --email <user email address>"
-    opts.separator "==============================================================="
+# Option switches
+parser = optparse.OptionParser()
+parser.add_option("-f", "--puppetfile", dest="puppet_file", help="Puppet file to read")
+parser.add_option("-d", "--environment", dest="puppet_env_dir", help="Environment directory to setup")
+parser.add_option("-u", "--username", dest="git_username", help="GIT Bitbucket user name")
+parser.add_option("-n", "--fullname", dest="user_fullname", help="Your full name")
+parser.add_option("-e", "--email", dest="user_email", help="Your Email Address")
+(options, args) = parser.parse_args()
 
-    opts.on("-f", "--puppetfile PUPPETFILE", "Puppet file to read") do |f|
-      options[:puppet_file] = f
-    end
-    opts.on("-d", "--environment ENV", "Environment directory to setup") do |d|
-      options[:puppet_env_dir] = d
-    end
-    opts.on("-u", "--username USER", "GIT Bitbucket user name") do |u|
-      options[:git_username] = u
-    end
-    opts.on("-n", "--fullname FULLNAME", "Your full name") do |n|
-      options[:user_fullname] = n
-    end
-    opts.on("-e", "--email EMAIL", "Your Email Address") do |e|
-      options[:user_email] = e
-    end
-    opts.on("-?", "--help", "Show usage") do
-      puts opts
-      exit 0
-    end
-end.parse!
-end
+print("===============================================================")
+if not os.path.exists(git_bin):
+  print(red('ERROR:GIT binary not found in the path:FAILED'))
+  clear_all_vars()
+  print("===============================================================")
+  exit(1)
 
-puts "==============================================================="
-if not File.exists?($git_bin)
-  puts red('ERROR:GIT binary not found in the path:FAILED')
-  clear_all_vars
-  puts "==============================================================="
-  exit 1
-end
-if options[:puppet_file]
-  $puppetfile = options[:puppet_file]
-  if File.exists?($puppetfile)
-    $puppetfile_contents = File.read($puppetfile)
-  else
-    puts red("#{$str_error_msg}puppetfile:FAILED")
-    clear_all_vars
-    puts "==============================================================="
-    exit 1
-  end
-else
-  puts "#{$str_error_msg}puppetfile: " + red('FAILED')
-  clear_all_vars
-  puts "==============================================================="
-  exit 1
-end
+if options.puppet_file:
+  puppetfile = options.puppet_file
+  if os.path.exists(puppetfile):
+    puppetfile_contents = open(puppetfile).read()
+  else:
+    print(f"{str_error_msg}puppetfile:FAILED")
+    clear_all_vars()
+    print("===============================================================")
+    exit(1)
+else:
+  print(f"{str_error_msg}puppetfile: {red('FAILED')}")
+  clear_all_vars()
+  print("===============================================================")
+  exit(1)
 
-if options[:puppet_env_dir]
-  $puppet_environment = options[:puppet_env_dir].chomp
-  if File.exists?($puppet_environment)
-    puts red('ERROR: Environment directory already exists. Please remove: ')
-    puts "==============================================================="
-    clear_all_vars
-    exit 1
-  else
-    Dir.mkdir($puppet_environment)
-    Dir.mkdir($puppet_environment + "/modules")
-    Dir.mkdir($puppet_environment + "/manifests")
-    Dir.mkdir($puppet_environment + "/hieradata")
-  end
-else
-  puts red("#{$str_error_msg}environment directory:FAILED")
-  puts "==============================================================="
-  clear_all_vars
-  exit 1
-end
+if options.puppet_env_dir:
+  puppet_environment = options.puppet_env_dir.strip()
+  if os.path.exists(puppet_environment):
+    print(red('ERROR: Environment directory already exists. Please remove: '))
+    print("===============================================================")
+    clear_all_vars()
+    exit(1)
+  else:
+    os.makedirs(puppet_environment)
+    os.makedirs(os.path.join(puppet_environment, "modules"))
+    os.makedirs(os.path.join(puppet_environment, "manifests"))
+    os.makedirs(os.path.join(puppet_environment, "hieradata"))
+else:
+  print(f"{red(str_error_msg)}environment directory:FAILED")
+  print("===============================================================")
+  clear_all_vars()
+  exit(1)
 
-if options[:git_username]
-  $git_username = options[:git_username].chomp
-else
-  puts red("#{$str_error_msg}GIT username:FAILED")
-  puts "==============================================================="
-  clear_all_vars
-  exit 1
-end
+if options.git_username:
+  git_username = options.git_username.strip()
+else:
+  print(f"{str_error_msg}GIT username:FAILED")
+  print("===============================================================")
+  clear_all_vars()
+  exit(1)
 
-if options[:user_fullname]
-  $user_fullname = options[:user_fullname]
-else
-  puts red("#{$str_error_msg}User Full Name:FAILED")
-  puts "==============================================================="
-  clear_all_vars
-  exit 1
-end
+if options.user_fullname:
+  user_fullname = options.user_fullname.strip()
+else:
+  print(f"{str_error_msg}User Full Name:FAILED")
+  print("===============================================================")
+  clear_all_vars()
+  exit(1)
 
-if options[:user_email]
-  $user_email = options[:user_email].chomp
-else
-  puts red("#{$str_error_msg}User Email Address:FAILED")
-  puts "==============================================================="
-  clear_all_vars
-  exit 1
-end
+if options.user_email:
+  user_email = options.user_email.strip()
+else:
+  print(f"{str_error_msg}User Email Address:FAILED")
+  print("===============================================================")
+  clear_all_vars()
+  exit(1)
 
-print "Please enter your git bitbucket password: "
-$git_password = STDIN.noecho(&:gets).chomp
-puts ""
+git_password = getpass.getpass("Please enter your git bitbucket password: ")
 
-git_askpass_file = "/usr/local/bin/.git_askpass.#{$git_username}"
+git_askpass_file = f"/usr/local/bin/.git_askpass.{git_username}"
+git_askpass_script = "#!/bin/ksh\necho $GIT_PASSWORD\n"
+with open(git_askpass_file, 'w') as f:
+  f.write(git_askpass_script)
+os.chmod(git_askpass_file, 0o755)
 
-$git_askpass_script = "#!/bin/ksh\necho \$GIT_PASSWORD\n"
-File.open(git_askpass_file, 'w') { |f| f.write($git_askpass_script) }
-File.chmod(0755, git_askpass_file)
+os.environ['GIT_PASSWORD'] = git_password
+os.environ['GIT_ASKPASS'] = git_askpass_file
 
-ENV['GIT_PASSWORD'] = $git_password
-ENV['GIT_ASKPASS'] = "#{git_askpass_file}"
+# Processing starts here
+with open(os.path.join(puppet_environment, "environment.conf"), 'w') as f:
+  f.write(environment_conf_contents)
 
-###Processing starts here###
-File.open($puppet_environment + "/environment.conf", 'w') { |f| f.write($environment_conf_contents) }
-File.open($puppet_environment + "/manifests/site.pp", 'w') { |f| f.write($site_pp_contents) }
+with open(os.path.join(puppet_environment, "manifests", "site.pp"), 'w') as f:
+  f.write(site_pp_contents)
 
-puts "======================================================================="
-puts blue("INFO: All inputs are validated. Creating the environment. Please wait!!")
-puts "======================================================================="
+print("=======================================================================")
+print(blue("INFO: All inputs are validated. Creating the environment. Please wait!!"))
+print("=======================================================================")
 
-$puppetfile_contents.each_line do |line|
-   if parts = line.match(/^mod\s+'(?<module>.*)',\s+:git\s+=>\s+'(?<repo>.*)',\s+:branch\s+=>\s+'(?<branch>.*)'/)
-      git_repo_lines = true
-      puppet_module = parts['module']
-      repo = parts['repo']
-      branch = parts['branch'] 
+for line in puppetfile_contents.splitlines():
+  parts = None
+  if parts := re.match(r'^mod\s+\'(?P<module>.*)\',\s+:git\s+=>\s+\'(?P<repo>.*)\',\s+:branch\s+=>\s+\'(?P<branch>.*)\'', line):
+    git_repo_lines = True
+    puppet_module = parts['module']
+    repo = parts['repo']
+    branch = parts['branch'] 
 
-      repo.sub!(/ssh:/, "https:")
-      repo.sub!(/git@/, $git_username + "@")
-      repo.sub!(/-ssh/, "")
-      repo.sub!(/:7999\//, "/scm/")
-      command = $git_bin + " clone -b " + branch + " " + repo + " " + $puppet_environment + "/modules/" + puppet_module
-      puts "Running: " + command
-      `#{command}` 
-      command = $git_bin + " --git-dir=" + $puppet_environment + "/modules/" + puppet_module + '/.git config user.name "' + $user_fullname + '"'
-      puts "Running: " + command
-      `#{command}` 
-      command = $git_bin + " --git-dir=" + $puppet_environment + "/modules/" + puppet_module + '/.git config user.email "' + $user_email + '"'
-      puts "Running: " + command
-      `#{command}` 
-   end
-   if parts = line.match(/^mod\s+'(?<module>.*)',\s+:git\s+=>\s+'(?<repo>.*)',\s+:commit\s+=>\s+'(?<commit>.*)'/)
-      git_repo_lines = true
-      puppet_module = parts['module']
-      repo = parts['repo']
-      commit = parts['commit'] 
+    repo = repo.replace('ssh:', 'https:')
+    repo = repo.replace('git@', f"{git_username}@")
+    repo = repo.replace('-ssh', '')
+    repo = repo.replace(':7999/', '/scm/')
+    command = f"{git_bin} clone -b {branch} {repo} {os.path.join(puppet_environment, 'modules', puppet_module)}"
+    print(f"Running: {command}")
+    subprocess.run(command.split()) 
+    command = f"{git_bin} --git-dir={os.path.join(puppet_environment, 'modules', puppet_module, '.git')} config user.name '{user_fullname}'"
+    print(f"Running: {command}")
+    subprocess.run(command.split()) 
+    command = f"{git_bin} --git-dir={os.path.join(puppet_environment, 'modules', puppet_module, '.git')} config user.email '{user_email}'"
+    print(f"Running: {command}")
+    subprocess.run(command.split()) 
+  elif parts := re.match(r'^mod\s+\'(?P<module>.*)\',\s+:git\s+=>\s+\'(?P<repo>.*)\',\s+:commit\s+=>\s+\'(?P<commit>.*)\'', line):
+    git_repo_lines = True
+    puppet_module = parts['module']
+    repo = parts['repo']
+    commit = parts['commit'] 
 
-      repo.sub!(/ssh:/, "https:")
-      repo.sub!(/git@/, $git_username + "@")
-      repo.sub!(/-ssh/, "")
-      repo.sub!(/:7999\//, "/scm/")
-      command = $git_bin + " clone " + repo + " " + $puppet_environment + "/modules/" + puppet_module
-      puts "Running: " + command
-      `#{command}` 
-      command = $git_bin + " --git-dir=" + $puppet_environment + "/modules/" + puppet_module + '/.git config user.name "' + $user_fullname + '"'
-      puts "Running: " + command
-      `#{command}` 
-      command = $git_bin + " --git-dir=" + $puppet_environment + "/modules/" + puppet_module + '/.git config user.email "' + $user_email + '"'
-      puts "Running: " + command
-      `#{command}` 
-      Dir.chdir($puppet_environment + "/modules/" + puppet_module) do
-         command = $git_bin + " checkout " + commit
-         puts "Running: " + command
-         `#{command}`
-      end
-   end
-end
-
-if git_repo_lines == false
-  puts red("WARNING:No GIT repo modules found.Standard Environment is created!")
-end
-clear_all_vars
-puts "==============================================================================="
-puts blue("INFO: Setup completed.Env created under #{$puppet_environment}")
-puts "==============================================================================="
+    repo = repo.replace('ssh:', 'https:')
+    repo = repo.replace('git@', f"{git_username}@")
+    repo = repo.replace('-ssh', '')
+    repo = repo.replace(':7999/', '/scm/')
+    command = f"{git_bin} clone {repo} {os.path.join(puppet_environment, 'modules', puppet_module)}"
+    print(f"Running: {command}")
+    subprocess.run(command.split()) 
+    command = f"{git_bin} --git-dir={os.path.join(puppet_environment, 'modules', puppet_module, '.git')} config user.name '{user_fullname}'"
+    print(f"Running: {command}")
+    subprocess
