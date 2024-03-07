@@ -134,7 +134,7 @@ print("=======================================================================")
 
 for line in puppetfile_contents.splitlines():
   parts = None
-  if parts := re.match(r'^mod\s+\'(?P<module>.*)\',\s+:git\s+=>\s+\'(?P<repo>https?://.*)\'', line):
+  if parts := re.match(r'^mod\s+\'(?P<module>.*)\',\s+:git\s+=>\s+\'(?P<repo>https?://.*|ssh://.*)\'', line):
     git_repo_lines = True
     puppet_module = parts['module']
     repo = parts['repo']
