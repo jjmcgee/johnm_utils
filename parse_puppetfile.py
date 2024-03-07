@@ -1,8 +1,4 @@
 #!/opt/puppetlabs/puppet/bin/ruby
-##Description: This sets up the puppet envrionment
-##Version:1.0
-##Author:I425871 (andrew.c.mcdonald@jpmchase.com)
-##Modified:v686758 (ravidatta.harishankar@jpmchase.com)
 require 'io/console'
 require 'optparse'
 
