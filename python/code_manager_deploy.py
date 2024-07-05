@@ -8,10 +8,11 @@ HEADERS = {
     "Content-Type": "application/json",
     "X-Authentication": TOKEN
 }
+CA_CERT_PATH = "/path/to/ca_cert.pem"  # Replace with the path to your CA certificate
 
 def trigger_deploy_all(wait=True):
     url = f"{CODE_MANAGER_API_URL}/deploys"
-    response = requests.post(url, headers=HEADERS)
+    response = requests.post(url, headers=HEADERS, verify=CA_CERT_PATH)
     
     if response.status_code == 202:
         print("Deploy triggered for all environments.")
@@ -26,7 +27,7 @@ def trigger_deploy_specific(environment, wait=True):
     data = {
         "environments": [environment]
     }
-    response = requests.post(url, headers=HEADERS, json=data)
+    response = requests.post(url, headers=HEADERS, json=data, verify=CA_CERT_PATH)
     
     if response.status_code == 202:
         print(f"Deploy triggered for environment: {environment}.")
@@ -39,7 +40,7 @@ def trigger_deploy_specific(environment, wait=True):
 def check_deploy_status(deploy_id):
     url = f"{CODE_MANAGER_API_URL}/deploys/{deploy_id}"
     while True:
-        response = requests.get(url, headers=HEADERS)
+        response = requests.get(url, headers=HEADERS, verify=CA_CERT_PATH)
         if response.status_code == 200:
             status = response.json()['state']
             print(f"Deploy status: {status}")
