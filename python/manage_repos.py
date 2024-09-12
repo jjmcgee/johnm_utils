@@ -9,10 +9,10 @@ repos = [
 ]
 
 # Directory where repositories will be cloned
-base_dir = '/path/to/clone/repositories'  # Change this to your desired directory
+BASE_DIR = '/path/to/clone/repositories'  # Change this to your desired directory
 
 # Ensure the base directory exists
-os.makedirs(base_dir, exist_ok=True)
+os.makedirs(BASE_DIR, exist_ok=True)
 
 def clone_repo(repo_url, clone_dir):
     try:
@@ -21,10 +21,25 @@ def clone_repo(repo_url, clone_dir):
     except Exception as e:
         print(f'Failed to clone {repo_url}: {e}')
 
+def fetch_all_branches(repo):
+    """
+    Fetch all branches from the remote to ensure that we can operate on them.
+    """
+    print(f"Fetching branches from remote for {repo.working_tree_dir}")
+    repo.git.fetch('--all')  # Fetch all branches from remote
+    repo.git.fetch('--prune')  # Remove any deleted remote branches
+
 def list_all_branches(repo):
-    print("All branches:")
+    """
+    List both local and remote branches.
+    """
+    print("Local branches:")
     for branch in repo.branches:
         print(branch)
+
+    print("\nRemote branches:")
+    for ref in repo.remote().refs:
+        print(ref)
 
 def list_merged_branches(repo):
     print("Merged branches:")
@@ -76,7 +91,7 @@ def delete_all_branches(repo):
     try:
         default_branch = repo.active_branch.name
         print(f'Default branch is {default_branch}')
-        
+
         all_branches = repo.git.branch().split()
         all_branches = [branch.strip() for branch in all_branches]
 
@@ -104,12 +119,15 @@ def show_menu():
 def main():
     for repo_url in repos:
         repo_name = repo_url.split('/')[-1].replace('.git', '')
-        clone_dir = os.path.join(base_dir, repo_name)
+        clone_dir = os.path.join(BASE_DIR, repo_name)
 
         if not os.path.exists(clone_dir):
             clone_repo(repo_url, clone_dir)
 
         repo = git.Repo(clone_dir)
+
+        # Fetch all remote branches before proceeding
+        fetch_all_branches(repo)
 
         while True:
             show_menu()
