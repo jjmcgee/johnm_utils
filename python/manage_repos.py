@@ -14,6 +14,9 @@ base_dir = '/path/to/clone/repositories'  # Change this to your desired director
 # Ensure the base directory exists
 os.makedirs(base_dir, exist_ok=True)
 
+# Protected branches that should not be deleted
+protected_branches = ['develop', 'master']
+
 def clone_repo(repo_url, clone_dir):
     try:
         print(f'Cloning repository {repo_url} into {clone_dir}')
@@ -77,6 +80,13 @@ def create_branch(repo, branch_name):
         print(f'Failed to create branch {branch_name}: {e}')
 
 def delete_branch(repo, branch_name):
+    """
+    Delete a branch after checking if it's protected.
+    """
+    if branch_name in protected_branches:
+        print(f"Error: Branch '{branch_name}' is protected and cannot be deleted.")
+        return
+
     try:
         repo.git.branch('-D', branch_name)
         print(f'Branch {branch_name} deleted successfully')
@@ -84,6 +94,9 @@ def delete_branch(repo, branch_name):
         print(f'Failed to delete branch {branch_name}: {e}')
 
 def delete_merged_branches(repo):
+    """
+    Delete merged branches, ensuring that protected branches are not deleted.
+    """
     try:
         default_branch = repo.active_branch.name
         print(f'Deleting merged branches into {default_branch} (local and remote):')
@@ -95,34 +108,36 @@ def delete_merged_branches(repo):
         merged_branches = repo.git.branch('-r', '--merged', default_branch).splitlines()
 
         for branch in merged_branches:
-            branch_name = branch.strip()
-            if branch_name != default_branch and not branch_name.startswith('*'):
+            branch_name = branch.strip().split('/')[-1]  # Extract branch name
+            if branch_name not in protected_branches:
                 print(f'Deleting merged branch: {branch_name}')
                 repo.git.push('origin', '--delete', branch_name)
             else:
-                print(f'Skipping branch: {branch_name}')
-
+                print(f'Skipping protected branch: {branch_name}')
     except Exception as e:
         print(f'Failed to delete merged branches in {repo.working_tree_dir}: {e}')
 
 def delete_all_branches(repo):
+    """
+    Delete all branches except for protected ones.
+    """
     try:
         default_branch = repo.active_branch.name
-        print(f'Deleting all branches except {default_branch} (local and remote):')
-        
+        print(f'Deleting all branches except {default_branch} and protected branches (local and remote):')
+
         # Fetch latest branches from remote
         fetch_all_branches(repo)
 
         all_branches = repo.git.branch('-r').splitlines()
-        all_branches = [branch.strip() for branch in all_branches]
+        all_branches = [branch.strip().split('/')[-1] for branch in all_branches]  # Get branch names
 
         for branch in all_branches:
-            if branch != default_branch and not branch.startswith('*'):
+            if branch not in protected_branches and branch != default_branch:
                 print(f'Deleting branch: {branch}')
                 repo.git.push('origin', '--delete', branch)
             else:
-                print(f'Skipping branch: {branch}')
-
+                print(f'Skipping protected or default branch: {branch}')
+                
     except Exception as e:
         print(f'Failed to delete branches in {repo.working_tree_dir}: {e}')
 
