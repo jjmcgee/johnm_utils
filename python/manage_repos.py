@@ -9,10 +9,10 @@ repos = [
 ]
 
 # Directory where repositories will be cloned
-BASE_DIR = '/path/to/clone/repositories'  # Change this to your desired directory
+base_dir = '/path/to/clone/repositories'  # Change this to your desired directory
 
 # Ensure the base directory exists
-os.makedirs(BASE_DIR, exist_ok=True)
+os.makedirs(base_dir, exist_ok=True)
 
 def clone_repo(repo_url, clone_dir):
     try:
@@ -42,14 +42,30 @@ def list_all_branches(repo):
         print(ref)
 
 def list_merged_branches(repo):
-    print("Merged branches:")
-    merged_branches = repo.git.branch('--merged').split()
+    """
+    List merged branches, including both local and remote branches.
+    """
+    default_branch = repo.active_branch.name
+    print(f"Listing merged branches into {default_branch} (local and remote):")
+
+    # Fetch latest branches from remote
+    fetch_all_branches(repo)
+
+    merged_branches = repo.git.branch('-r', '--merged', default_branch).splitlines()
     for branch in merged_branches:
         print(branch.strip())
 
 def list_unmerged_branches(repo):
-    print("Unmerged branches:")
-    unmerged_branches = repo.git.branch('--no-merged').split()
+    """
+    List unmerged branches, including both local and remote branches.
+    """
+    default_branch = repo.active_branch.name
+    print(f"Listing unmerged branches from {default_branch} (local and remote):")
+
+    # Fetch latest branches from remote
+    fetch_all_branches(repo)
+
+    unmerged_branches = repo.git.branch('-r', '--no-merged', default_branch).splitlines()
     for branch in unmerged_branches:
         print(branch.strip())
 
@@ -70,19 +86,21 @@ def delete_branch(repo, branch_name):
 def delete_merged_branches(repo):
     try:
         default_branch = repo.active_branch.name
-        print(f'Default branch is {default_branch}')
+        print(f'Deleting merged branches into {default_branch} (local and remote):')
+
+        # Fetch latest branches from remote
+        fetch_all_branches(repo)
 
         # Get list of merged branches
-        merged_branches = repo.git.branch('--merged').split()
-        merged_branches = [branch.strip() for branch in merged_branches]
+        merged_branches = repo.git.branch('-r', '--merged', default_branch).splitlines()
 
-        # Delete merged branches
         for branch in merged_branches:
-            if branch != default_branch and not branch.startswith('*'):
-                print(f'Deleting merged branch: {branch}')
-                repo.git.branch('-d', branch)
+            branch_name = branch.strip()
+            if branch_name != default_branch and not branch_name.startswith('*'):
+                print(f'Deleting merged branch: {branch_name}')
+                repo.git.push('origin', '--delete', branch_name)
             else:
-                print(f'Skipping branch: {branch}')
+                print(f'Skipping branch: {branch_name}')
 
     except Exception as e:
         print(f'Failed to delete merged branches in {repo.working_tree_dir}: {e}')
@@ -90,18 +108,21 @@ def delete_merged_branches(repo):
 def delete_all_branches(repo):
     try:
         default_branch = repo.active_branch.name
-        print(f'Default branch is {default_branch}')
+        print(f'Deleting all branches except {default_branch} (local and remote):')
+        
+        # Fetch latest branches from remote
+        fetch_all_branches(repo)
 
-        all_branches = repo.git.branch().split()
+        all_branches = repo.git.branch('-r').splitlines()
         all_branches = [branch.strip() for branch in all_branches]
 
         for branch in all_branches:
             if branch != default_branch and not branch.startswith('*'):
                 print(f'Deleting branch: {branch}')
-                repo.git.branch('-D', branch)
+                repo.git.push('origin', '--delete', branch)
             else:
                 print(f'Skipping branch: {branch}')
-                
+
     except Exception as e:
         print(f'Failed to delete branches in {repo.working_tree_dir}: {e}')
 
@@ -119,7 +140,7 @@ def show_menu():
 def main():
     for repo_url in repos:
         repo_name = repo_url.split('/')[-1].replace('.git', '')
-        clone_dir = os.path.join(BASE_DIR, repo_name)
+        clone_dir = os.path.join(base_dir, repo_name)
 
         if not os.path.exists(clone_dir):
             clone_repo(repo_url, clone_dir)
