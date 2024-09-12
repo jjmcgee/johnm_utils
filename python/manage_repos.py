@@ -34,15 +34,23 @@ def fetch_all_branches(repo):
 
 def list_all_branches(repo):
     """
-    List both local and remote branches.
+    List both local and remote branches, marking protected branches.
     """
     print("Local branches:")
     for branch in repo.branches:
-        print(branch)
+        branch_name = branch.name
+        if branch_name in protected_branches:
+            print(f"{branch_name} (protected)")
+        else:
+            print(branch_name)
 
     print("\nRemote branches:")
     for ref in repo.remote().refs:
-        print(ref)
+        branch_name = ref.name.split('/')[-1]  # Extract branch name from remote ref
+        if branch_name in protected_branches:
+            print(f"{branch_name} (protected)")
+        else:
+            print(branch_name)
 
 def list_merged_branches(repo):
     """
@@ -137,7 +145,7 @@ def delete_all_branches(repo):
                 repo.git.push('origin', '--delete', branch)
             else:
                 print(f'Skipping protected or default branch: {branch}')
-                
+
     except Exception as e:
         print(f'Failed to delete branches in {repo.working_tree_dir}: {e}')
 
